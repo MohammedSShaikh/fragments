@@ -30,22 +30,12 @@ app.use(cors());
 // Use gzip/deflate compression middleware
 app.use(compression());
 
-// Define a simple health check route. If the server is running
-// we'll respond with a 200 OK.  If not, the server isn't healthy.
-app.get('/', (req, res) => {
-  // Clients shouldn't cache this response (always request it fresh)
-  // See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching#controlling_caching
-  res.setHeader('Cache-Control', 'no-cache');
+// modifications to src/app.js
 
-  // Send a 200 'OK' response with info about our repo
-  res.status(200).json({
-    status: 'ok',
-    author,
-    // TODO: change this to use your GitHub username!
-    githubUrl: 'https://github.com/MohammedSShaikh/fragments',
-    version,
-  });
-});
+// Remove `app.get('/', (req, res) => {...});` and replace with:
+
+// Define our routes
+app.use('/', require('./routes'));
 
 // Add 404 middleware to handle any requests for resources that can't be found
 app.use((req, res) => {
@@ -82,3 +72,18 @@ app.use((err, req, res, next) => {
 
 // Export our `app` so we can access it in server.js
 module.exports = app;
+
+// modifications to src/app.js
+const passport = require('passport');
+
+const authenticate = require('./auth');
+
+// Use gzip/deflate compression middleware
+app.use(compression());
+
+// Set up our passport authentication middleware
+passport.use(authenticate.strategy());
+app.use(passport.initialize());
+
+// Define our routes
+app.use('/', require('./routes'));
