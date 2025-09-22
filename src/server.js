@@ -1,3 +1,4 @@
+/* eslint-env node */
 // src/server.js
 
 require('dotenv').config();

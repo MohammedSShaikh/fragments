@@ -7,7 +7,7 @@ const compression = require('compression');
 
 // author and version from our package.json file
 // TODO: make sure you have updated your name in the `author` section
-const { author, version } = require('../package.json');
+//const { author, version } = require('../package.json');
 
 const logger = require('./logger');
 const pino = require('pino-http')({
