@@ -1,15 +1,16 @@
-// src/routes/api/index.js
-
-/**
- * The main entry-point for the v1 version of the fragments API.
- */
+// src/routes/api/index.js - SIMPLEST approach
 const express = require('express');
-
-// Create a router on which to mount our API endpoints
 const router = express.Router();
 
-// Define our first route, which will be: GET /v1/fragments
+// Simple raw body parser that accepts all content types for now
+const rawBody = () =>
+  express.raw({
+    inflate: true,
+    limit: '5mb',
+    type: () => true  // Accept everything, let the POST handler validate
+  });
+
 router.get('/fragments', require('./get'));
-// Other routes (POST, DELETE, etc.) will go here later on...
+router.post('/fragments', rawBody(), require('./post'));
 
 module.exports = router;

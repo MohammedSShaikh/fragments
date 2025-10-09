@@ -72,6 +72,3 @@ app.use(compression());
 // Set up our passport authentication middleware
 passport.use(authenticate.strategy());
 app.use(passport.initialize());
-
-// Define our routes
-app.use('/', require('./routes'));

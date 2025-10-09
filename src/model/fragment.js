@@ -169,7 +169,7 @@ class Fragment {
         // Later: 'text/markdown', 'text/html', 'application/json', etc.
       ];
       return supportedTypes.includes(type);
-    } catch (error) {
+    } catch {
       return false;
     }
   }
