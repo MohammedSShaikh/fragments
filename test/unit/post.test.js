@@ -2,6 +2,10 @@ const request = require('supertest');
 const app = require('../../src/app');
 
 describe('POST /v1/fragments', () => {
+  // Define the expected hashed email for testing
+  const testUser = 'user1@email.com';
+  const expectedHashedUser = '11d4c22e42c8f61feaba154683dea407b101cfd90987dda9e342843263ca420a';
+
   // Authenticated requests
   describe('authenticated requests', () => {
     test('authenticated users can create a plain text fragment', async () => {
@@ -19,7 +23,7 @@ describe('POST /v1/fragments', () => {
       );
       expect(res.body.fragment.type).toBe('text/plain');
       expect(res.body.fragment.size).toBe(11); // "Hello World".length
-      expect(res.body.fragment.ownerId).toBe('user1@email.com');
+      expect(res.body.fragment.ownerId).toBe(expectedHashedUser); // Now expecting hashed email
       expect(Date.parse(res.body.fragment.created)).not.toBeNaN();
       expect(Date.parse(res.body.fragment.updated)).not.toBeNaN();
     });
@@ -52,15 +56,15 @@ describe('POST /v1/fragments', () => {
     });
 
     test('missing Content-Type header returns 400', async () => {
-  // Make a request with no body at all
-  const res = await request(app)
-    .post('/v1/fragments')
-    .auth('user1@email.com', 'password1');
-    // No .send() call = no automatic Content-Type
+      // Make a request with no body at all
+      const res = await request(app)
+        .post('/v1/fragments')
+        .auth('user1@email.com', 'password1');
+        // No .send() call = no automatic Content-Type
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body.status).toBe('error');
-    expect(res.body.error.code).toBe(400);
+      expect(res.statusCode).toBe(400);
+      expect(res.body.status).toBe('error');
+      expect(res.body.error.code).toBe(400);
     });
 
     test('empty body is allowed', async () => {
@@ -85,7 +89,7 @@ describe('POST /v1/fragments', () => {
       expect(res.statusCode).toBe(201);
       expect(res.body.fragment.size).toBe(fragmentData.length);
       expect(res.body.fragment.type).toBe('text/plain');
-      expect(res.body.fragment.ownerId).toBe('user1@email.com');
+      expect(res.body.fragment.ownerId).toBe(expectedHashedUser); // Now expecting hashed email
     });
 
     test('supports text/plain with charset', async () => {
@@ -97,6 +101,30 @@ describe('POST /v1/fragments', () => {
 
       expect(res.statusCode).toBe(201);
       expect(res.body.fragment.type).toBe('text/plain; charset=utf-8');
+    });
+
+    test('fragment includes all expected properties with correct values', async () => {
+      const testData = 'Test fragment data for property validation';
+      const res = await request(app)
+        .post('/v1/fragments')
+        .auth('user1@email.com', 'password1')
+        .set('Content-Type', 'text/plain')
+        .send(testData);
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.fragment).toHaveProperty('id');
+      expect(res.body.fragment).toHaveProperty('ownerId', expectedHashedUser); // Hashed email
+      expect(res.body.fragment).toHaveProperty('created');
+      expect(res.body.fragment).toHaveProperty('updated');
+      expect(res.body.fragment).toHaveProperty('type', 'text/plain');
+      expect(res.body.fragment).toHaveProperty('size', testData.length);
+      
+      // Validate timestamp format
+      expect(Date.parse(res.body.fragment.created)).not.toBeNaN();
+      expect(Date.parse(res.body.fragment.updated)).not.toBeNaN();
+      
+      // Validate that ownerId is a 64-character hex string (SHA-256 hash)
+      expect(res.body.fragment.ownerId).toMatch(/^[a-f0-9]{64}$/);
     });
   });
 
@@ -134,6 +162,21 @@ describe('POST /v1/fragments', () => {
         .send('Normal fragment');
 
       expect([201, 500]).toContain(res.statusCode); // Either success or handled error
+    });
+
+    test('hashed email provides data privacy', async () => {
+      const res = await request(app)
+        .post('/v1/fragments')
+        .auth('user1@email.com', 'password1')
+        .set('Content-Type', 'text/plain')
+        .send('Privacy test');
+
+      expect(res.statusCode).toBe(201);
+      // Ensure the response doesn't contain the original email
+      const responseString = JSON.stringify(res.body);
+      expect(responseString).not.toContain('user1@email.com');
+      // But does contain the hashed version
+      expect(res.body.fragment.ownerId).toBe(expectedHashedUser);
     });
   });
 });
