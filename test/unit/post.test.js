@@ -3,7 +3,7 @@ const app = require('../../src/app');
 
 describe('POST /v1/fragments', () => {
   // Define the expected hashed email for testing
-  const testUser = 'user1@email.com';
+  //const testUser = 'user1@email.com';
   const expectedHashedUser = '11d4c22e42c8f61feaba154683dea407b101cfd90987dda9e342843263ca420a';
 
   // Authenticated requests
