@@ -1,7 +1,28 @@
-#text file that will define all of the Docker instructions necessary for Docker Engine to build an image of service
+# Multi-stage build for optimized production image
 
-#starting point
-FROM node:22.1.0
+# Stage 1: Dependencies
+FROM node:22.1.0 AS dependencies
+
+LABEL maintainer="Mohammed Shaikh <msshaikh10@myseneca.ca>"
+LABEL description="Fragments node.js microservice"
+
+# Reduce npm spam when installing within Docker
+ENV NPM_CONFIG_LOGLEVEL=warn
+
+# Disable colour when run inside Docker
+ENV NPM_CONFIG_COLOR=false
+
+# Use /app as our working directory
+WORKDIR /app
+
+# Copy the package.json and package-lock.json files first for layer caching
+COPY package.json package-lock.json ./
+
+# Install node dependencies defined in package-lock.json
+RUN npm install
+
+# Stage 2: Production image using Alpine
+FROM node:22.1.0-alpine AS production
 
 LABEL maintainer="Mohammed Shaikh <msshaikh10@myseneca.ca>"
 LABEL description="Fragments node.js microservice"
@@ -9,24 +30,14 @@ LABEL description="Fragments node.js microservice"
 # We default to use port 8080 in our service
 ENV PORT=8080
 
-# Reduce npm spam when installing within Docker
-# https://docs.npmjs.com/cli/v8/using-npm/config#loglevel
-ENV NPM_CONFIG_LOGLEVEL=warn
-
-# Disable colour when run inside Docker
-# https://docs.npmjs.com/cli/v8/using-npm/config#color
-ENV NPM_CONFIG_COLOR=false
-
 # Use /app as our working directory
 WORKDIR /app
 
-# Option 3: explicit filenames - Copy the package.json and package-lock.json
-# files into the working dir (/app), using full paths and multiple source
-# files.  All of the files will be copied into the working dir `./app`
-COPY package.json package-lock.json ./
+# Copy node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
 
-# Install node dependencies defined in package-lock.json
-RUN npm install
+# Copy package files
+COPY package.json package-lock.json ./
 
 # Copy src to /app/src/
 COPY ./src ./src
@@ -34,8 +45,8 @@ COPY ./src ./src
 # Copy our HTPASSWD file
 COPY ./test/.htpasswd ./test/.htpasswd
 
-# Start the container by running our server
-CMD npm start
-
 # We run our service on port 8080
 EXPOSE 8080
+
+# Start the container by running our server
+CMD npm start
