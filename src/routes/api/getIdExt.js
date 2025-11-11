@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     // fallback: just return raw data with the fragment's original Content-Type
     const data = await fragment.getData();
     res.set('Content-Type', fragment.type).send(data);
-  } catch (err) {
+  } catch {
     res.status(404).json({
       status: 'error',
       error: { code: 404, message: 'Fragment not found or unsupported conversion.' }

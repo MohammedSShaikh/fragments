@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
         size: fragment.size
       }
     });
-  } catch (err) {
+  } catch {
     res.status(404).json({
       status: 'error',
       error: { code: 404, message: 'Fragment not found' }
