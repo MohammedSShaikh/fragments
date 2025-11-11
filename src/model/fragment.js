@@ -14,6 +14,9 @@ const {
   deleteFragment,
 } = require('./data');
 
+const MarkdownIt = require('markdown-it');
+const md = new MarkdownIt();
+
 class Fragment {
   constructor({ id, ownerId, created, updated, type, size = 0 }) {
     // Validate required fields
@@ -165,14 +168,30 @@ class Fragment {
       const { type } = contentType.parse(value);
       // Currently only text/plain is supported according to validTypes array
       const supportedTypes = [
-        'text/plain'
-        // Later: 'text/markdown', 'text/html', 'application/json', etc.
+        'text/plain',
+        'text/markdown',
+        'application/json'
       ];
       return supportedTypes.includes(type);
     } catch {
       return false;
     }
   }
+
+  //Conversion Method
+  async asConverted(ext) {
+  const buf = await this.getData();
+  if (this.mimeType === 'text/markdown' && ext === 'html') {
+    // Markdown to HTML
+    return {
+      data: Buffer.from(md.render(buf.toString())),
+      type: 'text/html'
+    };
+  }
+  // Add more conversions as needed
+  throw new Error('Unsupported conversion');
+  }
+
 }
 
 module.exports.Fragment = Fragment;
