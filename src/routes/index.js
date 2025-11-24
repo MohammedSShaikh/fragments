@@ -33,7 +33,7 @@ router.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   // Send a 200 'OK' response
   res.status(200).json(createSuccessResponse({
-    author: 'Mohammed Sultan Shaikh',
+    author: author,
     githubUrl: 'https://github.com/MohammedSShaikh/fragments',
     version,
     hostname: hostname()
