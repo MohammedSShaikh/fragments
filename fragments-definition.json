@@ -10,19 +10,27 @@
             "environment": [
                 {
                     "name": "AWS_COGNITO_POOL_ID",
-                    "value": ""
+                    "value": "us-east-1_ATINwATen"
+                },
+                {
+                    "name": "AWS_REGION",
+                    "value": "us-east-1"
+                },
+                {
+                    "name": "API_URL",
+                    "value": "http://fragments-lb-700822960.us-east-1.elb.amazonaws.com/"
                 },
                 {
                     "name": "PORT",
                     "value": "80"
                 },
                 {
-                    "name": "LOG_LEVEL",
-                    "value": "debug"
+                    "name": "AWS_COGNITO_CLIENT_ID",
+                    "value": "17mrvvd1siijr8ttuvg4bm31dr"
                 },
                 {
-                    "name": "AWS_COGNITO_CLIENT_ID",
-                    "value": ""
+                    "name": "LOG_LEVEL",
+                    "value": "debug"
                 }
             ],
             "environmentFiles": [],
@@ -62,7 +70,7 @@
     "memory": "512",
     "networkMode": "awsvpc",
     "placementConstraints": [],
-    "registeredAt": "2025-11-24T03:12:19.458Z",
+    "registeredAt": "2025-11-24T04:35:22.672Z",
     "registeredBy": "arn:aws:sts::533267255133:assumed-role/voclabs/user4400790=msshaikh10@myseneca.ca",
     "requiresAttributes": [
         {
@@ -93,13 +101,13 @@
     "requiresCompatibilities": [
         "FARGATE"
     ],
-    "revision": 1,
+    "revision": 2,
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
     },
     "status": "ACTIVE",
-    "taskDefinitionArn": "arn:aws:ecs:us-east-1:533267255133:task-definition/fragments-task:1",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-1:533267255133:task-definition/fragments-task:2",
     "taskRoleArn": "arn:aws:iam::533267255133:role/LabRole",
     "volumes": [],
     "tags": []
