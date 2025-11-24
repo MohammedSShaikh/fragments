@@ -61,7 +61,20 @@ module.exports = async (req, res) => {
       });
 
   } catch (error) {
-    logger.error('Error creating fragment:', error);
+    // Log the full error object with all details
+    logger.error({ 
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        code: error.code,
+        statusCode: error.statusCode,
+        $metadata: error.$metadata
+      },
+      userId: req.user,
+      contentType: req.get('Content-Type')
+    }, 'Error creating fragment - FULL DETAILS');
+    
     res.status(500).json({
       status: 'error',
       error: { code: 500, message: 'Internal Server Error' }
