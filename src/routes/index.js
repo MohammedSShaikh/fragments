@@ -15,6 +15,8 @@ const { authenticate } = require('../auth');
 //HTTP response update to use createSuccessResponse
 const { createSuccessResponse } = require('../response');
 
+const { hostname } = require('os');
+
 /**
  * Expose all of our API routes on /v1/* to include an API version.
  * Protect them all with middleware so you have to be authenticated
@@ -31,9 +33,10 @@ router.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   // Send a 200 'OK' response
   res.status(200).json(createSuccessResponse({
-    author,
+    author: 'Mohammed Sultan Shaikh',
     githubUrl: 'https://github.com/MohammedSShaikh/fragments',
     version,
+    hostname: hostname()
   }));
 });
 
