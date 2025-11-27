@@ -77,6 +77,9 @@ jobs:
       - name: Build Containers
         run: docker compose up -d
 
+      - name: Make setup script executable
+        run: chmod +x ./scripts/local-aws-setup.sh
+
       - name: Setup Local AWS Resources
         run: ./scripts/local-aws-setup.sh
 
