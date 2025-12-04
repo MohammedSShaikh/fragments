@@ -52,22 +52,22 @@ class Fragment {
    * @returns Promise<Array<Fragment>>
    */
   static async byUser(ownerId, expand = false) {
-  const result = await listFragments(ownerId, expand);
-  
-  if (!result || result.length === 0) {
-    return [];
+    const result = await listFragments(ownerId, expand);
+
+    if (!result || result.length === 0) {
+      return [];
+    }
+    // If expand is true, result contains JSON strings that need to be parsed
+    if (expand) {
+      return result.map(fragmentData => {
+        // Parse the JSON string to get the actual fragment object
+        const parsed = typeof fragmentData === 'string' ? JSON.parse(fragmentData) : fragmentData;
+        // Create Fragment instance with the parsed data
+        return new Fragment(parsed);
+      });
+    }
+    return result;
   }
-  // If expand is true, result contains JSON strings that need to be parsed
-  if (expand) {
-    return result.map(fragmentData => {
-      // Parse the JSON string to get the actual fragment object
-      const parsed = typeof fragmentData === 'string' ? JSON.parse(fragmentData) : fragmentData;
-      // Create Fragment instance with the parsed data
-      return new Fragment(parsed);
-    });
-  }  
-  return result;
-}
 
   /**
    * Gets a fragment for the user by the given id.
@@ -120,11 +120,11 @@ class Fragment {
     if (!Buffer.isBuffer(data)) {
       throw new Error('data must be a Buffer');
     }
-    
+
     // Update the metadata whenever we change the data
     this.updated = new Date().toISOString();
     this.size = data.length;
-    
+
     // Save both metadata and data
     await this.save();
     return writeFragmentData(this.ownerId, this.id, data);
@@ -170,7 +170,15 @@ class Fragment {
       const supportedTypes = [
         'text/plain',
         'text/markdown',
-        'application/json'
+        'text/html',
+        'text/csv',
+        'application/json',
+        'application/yaml',
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'image/avif',
+        'image/gif',
       ];
       return supportedTypes.includes(type);
     } catch {
@@ -180,16 +188,16 @@ class Fragment {
 
   //Conversion Method
   async asConverted(ext) {
-  const buf = await this.getData();
-  if (this.mimeType === 'text/markdown' && ext === 'html') {
-    // Markdown to HTML
-    return {
-      data: Buffer.from(md.render(buf.toString())),
-      type: 'text/html'
-    };
-  }
-  // Add more conversions as needed
-  throw new Error('Unsupported conversion');
+    const buf = await this.getData();
+    if (this.mimeType === 'text/markdown' && ext === 'html') {
+      // Markdown to HTML
+      return {
+        data: Buffer.from(md.render(buf.toString())),
+        type: 'text/html'
+      };
+    }
+    // Add more conversions as needed
+    throw new Error('Unsupported conversion');
   }
 
 }

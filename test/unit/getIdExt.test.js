@@ -5,7 +5,7 @@ const app = require('../../src/app');
 
 describe('GET /v1/fragments/:id with extension', () => {
   // If the request is missing the Authorization header, it should be forbidden
-  test('unauthenticated requests are denied', () => 
+  test('unauthenticated requests are denied', () =>
     request(app).get('/v1/fragments/123.txt').expect(401));
 
   // If the wrong username/password pair are used (no such user), it should be forbidden
@@ -47,7 +47,7 @@ describe('GET /v1/fragments/:id with extension', () => {
   // Test markdown to HTML conversion
   test('converts markdown fragment to HTML with .html extension', async () => {
     const markdownContent = '# Hello World\n\nThis is **bold** text.';
-    
+
     // Create markdown fragment
     const postRes = await request(app)
       .post('/v1/fragments')
@@ -73,7 +73,7 @@ describe('GET /v1/fragments/:id with extension', () => {
   test('returns original fragment data without extension', async () => {
     // Create a JSON fragment
     const jsonData = { message: 'Hello World', count: 42 };
-    
+
     const postRes = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
@@ -93,8 +93,8 @@ describe('GET /v1/fragments/:id with extension', () => {
     expect(JSON.parse(getRes.text)).toEqual(jsonData);
   });
 
-  // Test text/plain with .html extension (should return original data as fallback)
-  test('returns original text data when requesting .html extension for text/plain', async () => {
+  // Test text/plain with .html extension (should return 415 - unsupported conversion)
+  test('returns 415 when requesting unsupported .html extension for text/plain', async () => {
     // Create a text fragment
     const postRes = await request(app)
       .post('/v1/fragments')
@@ -105,14 +105,14 @@ describe('GET /v1/fragments/:id with extension', () => {
     expect(postRes.statusCode).toBe(201);
     const fragmentId = postRes.body.fragment.id;
 
-    // Get with .html extension (should return original data as fallback)
+    // Get with .html extension (should return 415 - unsupported conversion)
     const getRes = await request(app)
       .get(`/v1/fragments/${fragmentId}.html`)
       .auth('user1@email.com', 'password1');
 
-    expect(getRes.statusCode).toBe(200);
-    expect(getRes.text).toBe('Plain text content');
-    expect(getRes.headers['content-type']).toBe('text/plain; charset=utf-8');
+    expect(getRes.statusCode).toBe(415);
+    expect(getRes.body.status).toBe('error');
+    expect(getRes.body.error.code).toBe(415);
   });
 
   // Test with different user (should not find fragment)
@@ -136,10 +136,10 @@ describe('GET /v1/fragments/:id with extension', () => {
     expect(getRes.body.status).toBe('error');
   });
 
-  // Test getting markdown fragment with .txt extension
-  test('returns markdown fragment data with .txt extension', async () => {
+  // Test getting markdown fragment with .txt extension (converts to plain text)
+  test('converts markdown fragment to plain text with .txt extension', async () => {
     const markdownContent = '# Title\n\nSome content.';
-    
+
     // Create markdown fragment
     const postRes = await request(app)
       .post('/v1/fragments')
@@ -150,20 +150,20 @@ describe('GET /v1/fragments/:id with extension', () => {
     expect(postRes.statusCode).toBe(201);
     const fragmentId = postRes.body.fragment.id;
 
-    // Get as .txt (should return original markdown)
+    // Get as .txt (should convert to plain text)
     const getRes = await request(app)
       .get(`/v1/fragments/${fragmentId}.txt`)
       .auth('user1@email.com', 'password1');
 
     expect(getRes.statusCode).toBe(200);
     expect(getRes.text).toBe(markdownContent);
-    expect(getRes.headers['content-type']).toBe('text/markdown; charset=utf-8');
+    expect(getRes.headers['content-type']).toBe('text/plain; charset=utf-8');
   });
 
   // Test JSON fragment with .json extension
   test('returns JSON fragment data with .json extension', async () => {
     const jsonData = { test: 'data', number: 123 };
-    
+
     // Create JSON fragment
     const postRes = await request(app)
       .post('/v1/fragments')
