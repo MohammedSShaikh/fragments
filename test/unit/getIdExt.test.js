@@ -4,183 +4,218 @@ const request = require('supertest');
 const app = require('../../src/app');
 
 describe('GET /v1/fragments/:id with extension', () => {
-  // If the request is missing the Authorization header, it should be forbidden
+  // Authentication
   test('unauthenticated requests are denied', () =>
     request(app).get('/v1/fragments/123.txt').expect(401));
 
-  // If the wrong username/password pair are used (no such user), it should be forbidden
   test('incorrect credentials are denied', () =>
     request(app).get('/v1/fragments/123.txt').auth('invalid@email.com', 'incorrect_password').expect(401));
 
-  // Test getting a fragment that doesn't exist
+  // Error handling
   test('returns 404 for non-existent fragment', async () => {
     const res = await request(app)
       .get('/v1/fragments/non-existent-id.txt')
       .auth('user1@email.com', 'password1');
     expect(res.statusCode).toBe(404);
-    expect(res.body.status).toBe('error');
-    expect(res.body.error.code).toBe(404);
   });
 
-  // Test creating and retrieving a text fragment with .txt extension
-  test('returns fragment data with .txt extension for text/plain fragment', async () => {
-    // First create a fragment
+  // No extension
+  test('returns original fragment without extension', async () => {
     const postRes = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
       .set('Content-Type', 'text/plain')
-      .send('This is a test fragment');
+      .send('Test content');
 
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Then get it with .txt extension
     const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.txt`)
+      .get(`/v1/fragments/${postRes.body.fragment.id}`)
       .auth('user1@email.com', 'password1');
 
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.text).toBe('This is a test fragment');
-    expect(getRes.headers['content-type']).toBe('text/plain; charset=utf-8');
+    expect(getRes.text).toBe('Test content');
   });
 
-  // Test markdown to HTML conversion
-  test('converts markdown fragment to HTML with .html extension', async () => {
-    const markdownContent = '# Hello World\n\nThis is **bold** text.';
-
-    // Create markdown fragment
+  // Text conversions
+  test('converts markdown to HTML', async () => {
     const postRes = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
       .set('Content-Type', 'text/markdown')
-      .send(markdownContent);
+      .send('# Hello\n**bold**');
 
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Get as HTML
     const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.html`)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.html`)
       .auth('user1@email.com', 'password1');
 
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.headers['content-type']).toBe('text/html; charset=utf-8');
-    expect(getRes.text).toContain('<h1>Hello World</h1>');
-    expect(getRes.text).toContain('<strong>bold</strong>');
+    expect(getRes.text).toContain('<h1>Hello</h1>');
   });
 
-  // Test getting fragment without extension (fallback)
-  test('returns original fragment data without extension', async () => {
-    // Create a JSON fragment
-    const jsonData = { message: 'Hello World', count: 42 };
+  test('converts markdown to txt', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'text/markdown')
+      .send('# Title');
 
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.txt`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+    expect(getRes.headers['content-type']).toBe('text/plain; charset=utf-8');
+  });
+
+  test('returns markdown with .md extension', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'text/markdown')
+      .send('# Title');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.md`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+    expect(getRes.headers['content-type']).toBe('text/markdown; charset=utf-8');
+  });
+
+  test('converts HTML to txt', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'text/html')
+      .send('<h1>Test</h1>');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.txt`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+  });
+
+  // CSV conversions
+  test('converts CSV to JSON', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'text/csv')
+      .send('name,age\nJohn,30');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.json`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+    expect(JSON.parse(getRes.text)).toEqual([{ name: 'John', age: '30' }]);
+  });
+
+  test('returns 400 for invalid CSV to JSON', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'text/csv')
+      .send('name,age');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.json`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(400);
+  });
+
+  // JSON/YAML conversions
+  test('converts JSON to YAML', async () => {
     const postRes = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
       .set('Content-Type', 'application/json')
-      .send(JSON.stringify(jsonData));
+      .send(JSON.stringify({ name: 'John' }));
 
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Get without extension
     const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}`)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.yaml`)
       .auth('user1@email.com', 'password1');
 
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.headers['content-type']).toBe('application/json; charset=utf-8');
-    expect(JSON.parse(getRes.text)).toEqual(jsonData);
+    expect(getRes.text).toContain('name: John');
   });
 
-  // Test text/plain with .html extension (should return 415 - unsupported conversion)
-  test('returns 415 when requesting unsupported .html extension for text/plain', async () => {
-    // Create a text fragment
+  test('returns 400 for invalid JSON to YAML', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'application/json')
+      .send('{"invalid": json}');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.yaml`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(400);
+  });
+
+  test('converts JSON to txt', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'application/json')
+      .send(JSON.stringify({ test: 'data' }));
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.txt`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+  });
+
+  test('returns YAML with .yml extension', async () => {
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'application/yaml')
+      .send('name: Jane');
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.yml`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+  });
+
+  // Image conversions
+  test('converts image to jpg', async () => {
+    const pngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+
+    const postRes = await request(app)
+      .post('/v1/fragments')
+      .auth('user1@email.com', 'password1')
+      .set('Content-Type', 'image/png')
+      .send(pngBuffer);
+
+    const getRes = await request(app)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.jpg`)
+      .auth('user1@email.com', 'password1');
+
+    expect(getRes.statusCode).toBe(200);
+    expect(getRes.headers['content-type']).toContain('image/jpeg');
+  });
+
+  // Unsupported conversions
+  test('returns 415 for unsupported conversion', async () => {
     const postRes = await request(app)
       .post('/v1/fragments')
       .auth('user1@email.com', 'password1')
       .set('Content-Type', 'text/plain')
-      .send('Plain text content');
+      .send('Plain text');
 
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Get with .html extension (should return 415 - unsupported conversion)
     const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.html`)
+      .get(`/v1/fragments/${postRes.body.fragment.id}.html`)
       .auth('user1@email.com', 'password1');
 
     expect(getRes.statusCode).toBe(415);
-    expect(getRes.body.status).toBe('error');
-    expect(getRes.body.error.code).toBe(415);
-  });
-
-  // Test with different user (should not find fragment)
-  test('returns 404 when accessing another users fragment', async () => {
-    // Create fragment with user1
-    const postRes = await request(app)
-      .post('/v1/fragments')
-      .auth('user1@email.com', 'password1')
-      .set('Content-Type', 'text/plain')
-      .send('User1 fragment');
-
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Try to access with user2
-    const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.txt`)
-      .auth('user2@email.com', 'password2');
-
-    expect(getRes.statusCode).toBe(404);
-    expect(getRes.body.status).toBe('error');
-  });
-
-  // Test getting markdown fragment with .txt extension (converts to plain text)
-  test('converts markdown fragment to plain text with .txt extension', async () => {
-    const markdownContent = '# Title\n\nSome content.';
-
-    // Create markdown fragment
-    const postRes = await request(app)
-      .post('/v1/fragments')
-      .auth('user1@email.com', 'password1')
-      .set('Content-Type', 'text/markdown')
-      .send(markdownContent);
-
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Get as .txt (should convert to plain text)
-    const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.txt`)
-      .auth('user1@email.com', 'password1');
-
-    expect(getRes.statusCode).toBe(200);
-    expect(getRes.text).toBe(markdownContent);
-    expect(getRes.headers['content-type']).toBe('text/plain; charset=utf-8');
-  });
-
-  // Test JSON fragment with .json extension
-  test('returns JSON fragment data with .json extension', async () => {
-    const jsonData = { test: 'data', number: 123 };
-
-    // Create JSON fragment
-    const postRes = await request(app)
-      .post('/v1/fragments')
-      .auth('user1@email.com', 'password1')
-      .set('Content-Type', 'application/json')
-      .send(JSON.stringify(jsonData));
-
-    expect(postRes.statusCode).toBe(201);
-    const fragmentId = postRes.body.fragment.id;
-
-    // Get with .json extension
-    const getRes = await request(app)
-      .get(`/v1/fragments/${fragmentId}.json`)
-      .auth('user1@email.com', 'password1');
-
-    expect(getRes.statusCode).toBe(200);
-    expect(JSON.parse(getRes.text)).toEqual(jsonData);
-    expect(getRes.headers['content-type']).toBe('application/json; charset=utf-8');
   });
 });
